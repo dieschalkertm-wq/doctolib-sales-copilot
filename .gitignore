@@ -1,0 +1,44 @@
+# Secrets / Credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials*.json
+token*.json
+
+# Echte Daten (personenbezogen / vertraulich) – niemals committen
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+exports/
+imports/
+raw_cache/
+*.csv
+*.xlsx
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.next/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
