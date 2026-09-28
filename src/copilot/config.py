@@ -89,9 +89,64 @@ class ResearchPolicy(BaseModel):
     booking_signal_domains: dict[str, str] = Field(default_factory=dict)
 
 
+class Clearance(BaseModel):
+    """Freigabe-Checkliste für Provider mit externem Abruf. Erst wenn ALLES bestätigt ist, darf ein Provider produktiv laufen."""
+    model_config = ConfigDict(extra="forbid")
+    tos_reviewed: bool = False          # Nutzungsbedingungen geprüft
+    robots_checked: bool = False        # robots.txt / technische Zugriffsregeln geprüft
+    rate_limit_agreed: bool = False     # Abrufrate festgelegt/akzeptabel
+    internal_policy_ok: bool = False    # interne doctolib-Vorgaben erlauben die Nutzung
+    approved_by: str = ""               # wer hat freigegeben (Name, kein Secret)
+
+    def missing(self) -> list[str]:
+        items = [name for name in ("tos_reviewed", "robots_checked", "rate_limit_agreed", "internal_policy_ok")
+                 if not getattr(self, name)]
+        return items + ([] if self.approved_by.strip() else ["approved_by"])
+
+    @property
+    def is_cleared(self) -> bool:
+        return not self.missing()
+
+
+class ProviderConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = False
+    clearance: Clearance = Clearance()
+
+
+class ProvidersPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    local_import: ProviderConfig = ProviderConfig(enabled=True)
+    practice_website: ProviderConfig = ProviderConfig(enabled=True)
+    map: ProviderConfig = ProviderConfig()
+    doctolib: ProviderConfig = ProviderConfig()
+
+
+class ScannerPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    default_radius_km: float = Field(default=10.0, gt=0, le=100)
+    max_radius_km: float = Field(default=50.0, gt=0, le=200)
+    network_radius_km: float = Field(default=25.0, gt=0, le=100)   # Reichweite abgeleiteter Überweiserbezüge
+    research_max_practices: int = Field(default=25, ge=0, le=100)  # harte Obergrenze pro Scan (kein Massenabruf)
+
+
+class LLMPolicy(BaseModel):
+    """LLM-Gateway: standardmäßig aus. Der Kontext wird nur aus freigegebenen Feldern gebaut."""
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = False
+    allow_external: bool = False        # externe Anbieter (z. B. Cloud-API) erst nach interner Klärung
+    max_facts: int = Field(default=50, ge=1, le=200)
+    include_practice_name: bool = False
+    include_doctor_names: bool = False
+    include_contact_data: bool = False
+
+
 class Policies(BaseModel):
     model_config = ConfigDict(extra="forbid")
     research: ResearchPolicy = ResearchPolicy()
+    providers: ProvidersPolicy = ProvidersPolicy()
+    scanner: ScannerPolicy = ScannerPolicy()
+    llm: LLMPolicy = LLMPolicy()
     fact_staleness_days: dict[str, int] = Field(default_factory=lambda: {"default": 180})
     expected_fact_keys: list[str] = Field(default_factory=list)
 

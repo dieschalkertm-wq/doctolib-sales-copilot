@@ -115,3 +115,23 @@ class KnowledgeRepository:
     def doctor_count(self, practice_id: int) -> int:
         return int(self.conn.execute(
             "SELECT count(*) FROM k_practice_doctor WHERE practice_id = ?", (practice_id,)).fetchone()[0])
+
+    # -- origins (Provenienz der Existenz einer Praxis)
+    def record_origin(self, practice_id: int, provider: str, source_ref: str) -> None:
+        now = to_iso(utcnow())
+        self.conn.execute(
+            "INSERT INTO k_practice_origin (practice_id, provider, source_ref, first_seen_at, last_seen_at)"
+            " VALUES (?,?,?,?,?) ON CONFLICT(practice_id, provider, source_ref) DO UPDATE SET last_seen_at = excluded.last_seen_at",
+            (practice_id, provider, source_ref, now, now))
+
+    def origins_of(self, practice_id: int) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT provider, source_ref, first_seen_at, last_seen_at FROM k_practice_origin WHERE practice_id = ?"
+            " ORDER BY first_seen_at, id", (practice_id,)).fetchall()
+
+    def doctor_keys_by_practice(self) -> dict[int, set[str]]:
+        result: dict[int, set[str]] = {}
+        for row in self.conn.execute(
+                "SELECT pd.practice_id, d.canonical_key FROM k_practice_doctor pd JOIN k_doctor d ON d.id = pd.doctor_id"):
+            result.setdefault(row[0], set()).add(row[1])
+        return result

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from copilot.domain.enums import EntityType, RelationOrigin, RelationType
+from copilot.domain.geo import format_distance
 from copilot.domain.models import Practice
 from copilot.domain.territory import Territory
 from copilot.domain.timeutil import utcnow
@@ -17,6 +18,8 @@ from copilot.research.facts import FactService
 from copilot.storage.knowledge import KnowledgeRepository
 from copilot.storage.network import NetworkRepository
 from copilot.storage.pipeline import PipelineRepository
+
+DOCTOLIB_SIGNAL_KEYS = frozenset({"doctolib_link_present", "doctolib_profile_public"})
 
 NEXT_ACTIONS = {
     "find_website": "Website der Praxis ermitteln (manuell) und Domain prüfen/freigeben",
@@ -50,6 +53,7 @@ class Worklist:
     scope_label: str
     items: list[WorklistItem]
     excluded: Counter = field(default_factory=Counter)
+    excluded_practices: list[tuple[Practice, str]] = field(default_factory=list)   # (Praxis, Grund) – nichts verschwindet still
 
 
 class WorklistService:
@@ -70,30 +74,42 @@ class WorklistService:
         else:
             practices = self.knowledge.list_practices(region=scope.region.key)  # type: ignore[union-attr]
 
-        customers = self.pipeline.customer_practice_ids()
-        result = Worklist(scope.label, [])
-        for practice in practices:
-            item = self._evaluate(practice, customers, now, result.excluded)
-            if item:
-                result.items.append(item)
-        result.items.sort(key=lambda i: (-i.score, i.practice.name.casefold(), i.practice.id or 0))
+        result = self.evaluate_many(practices, now=now, scope_label=scope.label)
         if limit is not None:
             result.items = result.items[:limit]
         return result
 
-    def _evaluate(self, p: Practice, customers: set[int], now: datetime, excluded: Counter) -> WorklistItem | None:
+    def evaluate_many(self, practices: list[Practice], *, now: datetime | None = None,
+                      scope_label: str = "") -> Worklist:
+        """Bewertet beliebige Praxislisten (Ort, Region, Radius …) mit denselben deterministischen Regeln."""
+        now = now or utcnow()
+        customers = self.pipeline.customer_practice_ids()
+        result = Worklist(scope_label, [])
+        for practice in practices:
+            item = self._evaluate(practice, customers, now, result)
+            if item:
+                result.items.append(item)
+        result.items.sort(key=lambda i: (-i.score, i.practice.name.casefold(), i.practice.id or 0))
+        return result
+
+    def _evaluate(self, p: Practice, customers: set[int], now: datetime, result: Worklist) -> WorklistItem | None:
         cfg = self.scoring
+
+        def exclude(reason: str) -> None:
+            result.excluded[reason] += 1
+            result.excluded_practices.append((p, reason))
+
         prospect = self.pipeline.get_prospect(p.id)  # type: ignore[arg-type]
         if cfg.exclude.customers and p.id in customers:
-            excluded["customer"] += 1
+            exclude("customer")
             return None
         if prospect and prospect.stage in cfg.exclude.prospect_stages:
-            excluded[f"stage_{prospect.stage.value}"] += 1
+            exclude(f"stage_{prospect.stage.value}")
             return None
         profile = self.facts.profile(EntityType.PRACTICE, p.id, now)  # type: ignore[arg-type]
         current = {v.fact.key: v for v in profile.current}
-        if cfg.exclude.already_doctolib_recognised and "doctolib_link_present" in current:
-            excluded["already_doctolib_recognised"] += 1
+        if cfg.exclude.already_doctolib_recognised and DOCTOLIB_SIGNAL_KEYS & current.keys():
+            exclude("already_doctolib_recognised")
             return None
 
         reasons: list[Reason] = []
@@ -149,5 +165,6 @@ class WorklistService:
                     best = r
         if best is None:
             return None
-        dist = f", {best.distance_km:g} km" if best.distance_km is not None else ""
+        dist = (", " + format_distance(best.distance_km, best.distance_uncertainty_km or 0.0)
+                if best.distance_km is not None else "")
         return weight[best.origin], f"Überweisung von Kundenpraxis #{best.from_id} ({label[best.origin]}{dist})"

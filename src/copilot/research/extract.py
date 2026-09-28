@@ -9,7 +9,7 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
 from copilot.domain.models import FactDraft
-from copilot.research.policy import host_matches, is_hard_blocked
+from copilot.research.policy import host_matches, is_doctolib_host
 
 _MEDICAL_TYPES = {"Physician", "MedicalClinic", "MedicalBusiness", "Dentist", "MedicalOrganization", "Hospital"}
 _LINK_ATTRS = {"a": "href", "iframe": "src", "script": "src", "form": "action", "link": "href"}
@@ -120,7 +120,7 @@ def extract_facts(html: str, base_url: str, booking_domains: dict[str, str]) -> 
     doctolib_urls, booking_names, booking_evidence = [], [], None
     for url in resolved:
         host = (urlsplit(url).hostname or "").lower()
-        if is_hard_blocked(host) and "doctolib" in host.split("."):
+        if is_doctolib_host(host):
             doctolib_urls.append(url[:300])
             continue
         for domain, provider in booking_domains.items():

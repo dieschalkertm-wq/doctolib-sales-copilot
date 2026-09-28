@@ -12,7 +12,7 @@ from copilot.domain.models import Fact, Research, Source
 from copilot.domain.timeutil import utcnow
 from copilot.errors import FetchError, NotFound, PolicyViolation
 from copilot.research.facts import FactService
-from copilot.research.provider import ResearchProvider, ResearchRequest
+from copilot.research.provider import ProviderOutput, ResearchProvider, ResearchRequest
 from copilot.storage.audit import AuditLog
 from copilot.storage.db import transaction
 from copilot.storage.knowledge import KnowledgeRepository
@@ -45,6 +45,18 @@ class ResearchService:
             status = ResearchStatus.BLOCKED if isinstance(exc, PolicyViolation) else ResearchStatus.FAILED
             self._finish_failed(provider, research.id, status, exc.code)  # type: ignore[arg-type]
             raise
+        return self._store(provider.name, request, research.id, output)  # type: ignore[arg-type]
+
+    def persist_output(self, provider_name: str, kind: str, request: ResearchRequest, output: ProviderOutput) -> RunResult:
+        """Persistiert das Ergebnis eines Providers, der bereits außerhalb gelaufen ist (z. B. Scanner-Kandidat mit
+        belegten Facts). Gleicher Provenance-Pfad wie run(): Research + Source + Facts + Audit."""
+        with transaction(self.conn):
+            research = self.repo.start_research(Research(
+                subject_type=request.subject_type, subject_id=request.subject_id, kind=kind,
+                provider=provider_name, started_at=utcnow()))
+            return self._store(provider_name, request, research.id, output)  # type: ignore[arg-type]
+
+    def _store(self, provider_name: str, request: ResearchRequest, research_id: int, output: ProviderOutput) -> RunResult:
         with transaction(self.conn):
             draft = output.source
             source = self.repo.insert_source(Source(
@@ -53,14 +65,14 @@ class ResearchService:
                 tos_ref=draft.tos_ref, reliability=draft.reliability,
                 raw_ref=self._cache_raw(draft.content_hash, draft.raw_content)))
             facts = [self.facts.record(request.subject_type, request.subject_id, d, source.id,  # type: ignore[arg-type]
-                                       research_id=research.id, observed_at=source.retrieved_at)
+                                       research_id=research_id, observed_at=source.retrieved_at)
                      for d in output.facts]
-            self.repo.finish_research(research.id, ResearchStatus.SUCCEEDED, utcnow())  # type: ignore[arg-type]
+            self.repo.finish_research(research_id, ResearchStatus.SUCCEEDED, utcnow())
             self.audit.record("research.run", "Research abgeschlossen", entity_type=request.subject_type.value,
                               entity_id=request.subject_id, content_hash=draft.content_hash,
-                              details={"provider": provider.name, "status": "succeeded", "source_id": source.id,
-                                       "research_id": research.id, "fact_count": len(facts)})
-        return RunResult(research.id, source, facts)  # type: ignore[arg-type]
+                              details={"provider": provider_name, "status": "succeeded", "source_id": source.id,
+                                       "research_id": research_id, "fact_count": len(facts)})
+        return RunResult(research_id, source, facts)
 
     def _finish_failed(self, provider: ResearchProvider, research_id: int, status: ResearchStatus, code: str) -> None:
         with transaction(self.conn):

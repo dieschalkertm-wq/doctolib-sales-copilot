@@ -1,5 +1,11 @@
 # Vertriebsgebiet. Koordinaten sind gerundete Ortsmittelpunkte (Referenzdaten, keine Kundendaten).
 # Erweitere die Liste, wenn Orte fehlen; unbekannte Orte werden beim Import gemeldet.
+# Genauigkeit: Ohne exakte Koordinaten wird eine Praxis am Ortsmittelpunkt verortet. Der tatsächliche Standort kann
+# bis zu "place_uncertainty_km" davon abweichen (ANNAHME: grob der Halbmesser eines Ortsgebiets, pro Ort überschreibbar
+# via uncertainty_km). Radiussuchen kennzeichnen deshalb "sicher innerhalb" und "möglicherweise innerhalb".
+geo:
+  place_uncertainty_km: 5.0
+
 regions:
   - key: saarland
     name: Saarland

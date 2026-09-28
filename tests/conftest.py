@@ -31,3 +31,8 @@ def app(settings):
 @pytest.fixture
 def synthetic_file() -> Path:
     return FIXTURES / "synthetic_practices.txt"
+
+
+@pytest.fixture
+def scan_source() -> Path:
+    return FIXTURES / "synthetic_scan_source.txt"

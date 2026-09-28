@@ -1,0 +1,13 @@
+Praxisname;Straße;PLZ;Ort;Fachrichtung;Website;Ärzte;Breitengrad;Längengrad
+SYNTH Kardiologie Beta;Musterweg 2;66113;Saarbrücken;Kardiologie;;;;
+SYNTH Herzzentrum Neu;Musterweg 2;66113;Saarbrücken;Kardiologie;synth-beta.invalid;;;
+SYNTH MVZ Nachfolge;Probeallee 3;66115;Saarbrücken;Orthopädie;;;;
+SYNTH Orthopädie Gamma;Andere Str. 9;66115;Saarbrücken;Orthopädie;;;;
+SYNTH HNO Omega;Neuweg 10;66119;Saarbrücken;HNO;synth-omega.invalid;Dr. Otto Nase;49,2350;6,9900
+SYNTH HNO Omega;Neuweg 10;66119;Saarbrücken;HNO;synth-omega.invalid;Dr. Otto Nase;49,2350;6,9900
+SYNTH Dermatologie Sigma;Hautstr. 3;66121;Saarbrücken;Hautarzt;;;;
+SYNTH Praxis Trier Neu;Moselweg 1;54290;Trier;Orthopädie;;;;
+SYNTH Unbekannt Tau;Nirgendsweg 1;66111;Saarbrücken;Zauberheilkunde;;;;
+;Leerweg 1;66111;Saarbrücken;HNO;;;;
+SYNTH Praxis Geo Fehler;Fehlerweg 1;66111;Saarbrücken;HNO;;;abc;6,9
+SYNTH Orthopädie Rho;Völkstr. 1;66333;Völklingen;Orthopädie;;;;

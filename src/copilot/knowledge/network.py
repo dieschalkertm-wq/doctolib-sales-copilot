@@ -7,8 +7,9 @@ from pathlib import Path
 
 from copilot.config import load_yaml
 from copilot.domain.enums import EntityType, FactStatus, RelationOrigin, RelationType
-from copilot.domain.geo import haversine_km
+from copilot.domain.geo import Certainty, classify
 from copilot.domain.models import NetworkRelationship
+from copilot.domain.territory import Territory
 from copilot.errors import ConfigError, IntegrityViolation, NotFound
 from copilot.storage.knowledge import KnowledgeRepository
 from copilot.storage.network import NetworkRepository
@@ -42,11 +43,15 @@ class DeriveResult:
 
 class NetworkService:
     def __init__(self, network: NetworkRepository, knowledge: KnowledgeRepository, research: ResearchRepository,
-                 rules: ReferralRules):
+                 rules: ReferralRules, territory: Territory):
         self.network, self.knowledge, self.research, self.rules = network, knowledge, research, rules
+        self.territory = territory
 
-    def derive_for_practice(self, practice_id: int, radius_km: float = 25.0) -> DeriveResult:
-        """Hausarzt -> Facharztpraxen in der Umgebung, nur regelbasiert (origin=derived)."""
+    def derive_for_practice(self, practice_id: int, radius_km: float = 25.0, *,
+                            candidate_ids: set[int] | None = None) -> DeriveResult:
+        """Hausarzt -> Facharztpraxen in der Umgebung, nur regelbasiert (origin=derived).
+        Distanzen sind Näherungen (Ortsmittelpunkte): Kandidaten, die sicher außerhalb liegen, entfallen; die
+        Unsicherheit wird an der Beziehung gespeichert."""
         source = self.knowledge.get_practice(practice_id)
         if source is None:
             raise NotFound("Praxis nicht gefunden", code="practice_not_found")
@@ -59,13 +64,14 @@ class NetworkService:
             return result
         targets = sorted({t for _, t in applicable})
         for cand in self.knowledge.practices_with_specialties(targets):
-            if cand.id == practice_id:
+            if cand.id == practice_id or (candidate_ids is not None and cand.id not in candidate_ids):
                 continue
-            if None in (source.lat, cand.lat):
+            src_point, cand_point = self.territory.point_for(source), self.territory.point_for(cand)
+            if src_point is None or cand_point is None:
                 result.skipped_no_geo += 1
                 continue
-            distance = haversine_km(source.lat, source.lon, cand.lat, cand.lon)  # type: ignore[arg-type]
-            if distance > radius_km:
+            certainty, distance, uncertainty = classify(src_point, cand_point, radius_km)
+            if certainty is Certainty.OUTSIDE:
                 continue
             cand_specs = {s.code for s in self.knowledge.practice_specialties(cand.id)}  # type: ignore[arg-type]
             match = next(((s, t) for s, t in applicable if t in cand_specs), None)
@@ -74,7 +80,9 @@ class NetworkService:
             _, created = self.network.insert(NetworkRelationship(
                 from_type=EntityType.PRACTICE, from_id=practice_id, to_type=EntityType.PRACTICE, to_id=cand.id,  # type: ignore[arg-type]
                 rel_type=RelationType.REFERS_TO, origin=RelationOrigin.DERIVED,
-                rule_id=self.rules.rule_id(*match), distance_km=round(distance, 1),
+                rule_id=self.rules.rule_id(*match),
+                distance_km=round(distance, 1) if uncertainty == 0 else round(distance),
+                distance_uncertainty_km=uncertainty or None,
                 note="regelbasiert abgeleitet, nicht belegt"))
             result.created += created
             result.existing += not created

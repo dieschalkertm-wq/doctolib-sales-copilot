@@ -97,6 +97,7 @@ class NetworkRelationship(_Model):
     origin: RelationOrigin
     strength: float | None = Field(default=None, ge=0, le=1)
     distance_km: float | None = Field(default=None, ge=0)
+    distance_uncertainty_km: float | None = Field(default=None, ge=0)   # ±; None = exakt/unbekannt
     fact_id: int | None = None
     rule_id: str | None = None
     note: str | None = Field(default=None, max_length=300)

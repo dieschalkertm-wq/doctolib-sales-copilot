@@ -48,3 +48,19 @@ class FetchError(CopilotError):
 
 class ImportFailed(CopilotError):
     code, exit_code = "import_failed", 8
+
+
+class ProviderNotCleared(PolicyViolation):
+    """Provider ist vorbereitet, aber noch nicht freigegeben (ToS, robots.txt, interne Vorgaben …)."""
+
+    code = "provider_not_cleared"
+
+
+class ProviderNotAvailable(CopilotError):
+    """Provider ist konfiguriert, aber es gibt (noch) keine technische Zugriffsmethode."""
+
+    code, exit_code = "provider_not_available", 9
+
+
+class LLMError(CopilotError):
+    code, exit_code = "llm_error", 10

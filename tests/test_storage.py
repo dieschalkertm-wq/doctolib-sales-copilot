@@ -69,3 +69,21 @@ def test_existing_directories_keep_their_permissions(tmp_path):
     connect(existing / "x.sqlite3").close()
     import os
     assert oct(os.stat(existing).st_mode & 0o777) == "0o755"
+
+
+def test_phase1_database_upgrades_to_scanner_schema_without_data_loss(monkeypatch):
+    import copilot.storage.db as db
+    original = db._migrations
+    monkeypatch.setattr(db, "_migrations", lambda: [m for m in original() if m[0] < "0006"])
+    conn = connect(":memory:")
+    assert migrate(conn)[-1] == "0005_pipeline"
+    conn.execute("INSERT INTO k_practice (name, canonical_key, created_at, updated_at) VALUES ('SYNTH Alt', 'k', 'x', 'x')")
+    conn.execute("INSERT INTO k_practice (name, canonical_key, created_at, updated_at) VALUES ('SYNTH Alt2', 'k2', 'x', 'x')")
+    conn.execute("INSERT INTO k_network_relationship (from_type, from_id, to_type, to_id, rel_type, origin, rule_id, created_at)"
+                 " VALUES ('practice', 1, 'practice', 2, 'refers_to', 'derived', 'r', 'x')")
+    monkeypatch.setattr(db, "_migrations", original)
+    assert migrate(conn) == ["0006_scanner"]
+    row = conn.execute("SELECT * FROM k_network_relationship").fetchone()
+    assert row["rule_id"] == "r" and row["distance_uncertainty_km"] is None       # alte Daten unverändert, neue Spalte leer
+    assert conn.execute("SELECT count(*) FROM k_practice_origin").fetchone()[0] == 0
+    assert conn.execute("SELECT count(*) FROM k_merge_candidate").fetchone()[0] == 0

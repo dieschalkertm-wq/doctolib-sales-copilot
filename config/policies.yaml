@@ -6,7 +6,8 @@ research:
   max_redirects: 3
   # Nur explizit freigegebene Domains dürfen abgerufen werden. Leer = alles gesperrt.
   # Beispiel (erst eintragen, wenn du die Site geprüft hast):  - praxis-beispiel.de
-  # doctolib.* und linkedin.com sind zusätzlich im Code hart gesperrt (Phase 1).
+  # linkedin.com ist im Code immer gesperrt. doctolib.* ist nur über den DoctolibProvider erreichbar,
+  # und dieser erst nach vollständiger Freigabe (providers.doctolib.clearance) UND Eintrag hier.
   allowed_domains: []
   # Erkennungssignale: Links/Widgets zu diesen Domains gelten als "Online-Buchung erkennbar".
   booking_signal_domains:
@@ -30,3 +31,33 @@ expected_fact_keys:
   - doctolib_link_present
   - online_booking_signal
   - public_contact_phone
+
+# Datenquellen-Provider (Scanner). "enabled" schaltet ihn ein; Provider mit externem Abruf brauchen zusätzlich
+# eine vollständige Freigabe-Checkliste. Nichts davon wird automatisch angenommen.
+providers:
+  local_import:      {enabled: true}     # eigene Listen/Exporte (funktioniert)
+  practice_website:  {enabled: true}     # Website-Research (funktioniert; Domain-Freigabe nötig)
+  map:               {enabled: false}    # Karten-/Geodaten (vorbereitet, keine Implementierung)
+  doctolib:                              # öffentliche doctolib-Informationen (vorbereitet, keine Zugriffsmethode)
+    enabled: false
+    clearance:
+      tos_reviewed: false
+      robots_checked: false
+      rate_limit_agreed: false
+      internal_policy_ok: false
+      approved_by: ""
+
+scanner:
+  default_radius_km: 10
+  max_radius_km: 50
+  network_radius_km: 25
+  research_max_practices: 25             # max. Website-Recherchen pro Scan (kein Massenabruf)
+
+# LLM-Gateway (Phase 2). Standard: aus. Externe LLMs erst nach Klärung der internen KI-/Datenrichtlinie.
+llm:
+  enabled: false
+  allow_external: false
+  max_facts: 50
+  include_practice_name: false
+  include_doctor_names: false
+  include_contact_data: false

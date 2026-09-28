@@ -105,7 +105,7 @@ def test_no_negative_or_invented_facts(app, practice):
 
 @pytest.mark.parametrize("url,code", [
     ("https://unbekannt.invalid/", "domain_not_allowed"),
-    ("https://www.doctolib.de/", "hard_blocked_domain"),
+    ("https://www.doctolib.de/", "doctolib_not_cleared"),
     ("https://www.linkedin.com/in/x", "hard_blocked_domain"),
     ("http://127.0.0.1/", "private_host"),
     ("http://localhost/", "private_host"),
@@ -171,7 +171,7 @@ def test_redirect_to_disallowed_domain_is_blocked(app, practice):
     provider, service, transport, *_ = make(app, routes)
     with pytest.raises(PolicyViolation) as exc:
         service.run(provider, req(practice))
-    assert exc.value.code == "hard_blocked_domain" and all("doctolib" not in c for c in transport.calls)
+    assert exc.value.code == "doctolib_not_cleared" and all("doctolib" not in c for c in transport.calls)
 
 
 def test_redirect_within_allowed_domain_is_followed_and_source_has_final_url(app, practice):

@@ -16,15 +16,14 @@ from copilot.connectors.imports.csv_practices import CsvPracticeSource
 from copilot.connectors.imports.mapping import load_mapping
 from copilot.connectors.imports.service import ROLES, PracticeImporter
 from copilot.domain.enums import EntityType, RelationType
+from copilot.domain.geo import format_distance
 from copilot.domain.models import FactDraft
-from copilot.errors import CopilotError, NotFound
+from copilot.errors import CopilotError, NotFound, ValidationFailed
 from copilot.logging_setup import configure_logging
-from copilot.research.client import PoliteClient
-from copilot.research.policy import FetchPolicy
-from copilot.research.practice_website import PracticeWebsiteProvider
 from copilot.research.provider import ResearchRequest
-from copilot.research.service import ResearchService
-from copilot.research.transport import UrllibTransport
+from copilot.scanner.registry import describe_providers
+from copilot.scanner.render import render_text
+from copilot.scanner.scanner import ScanRequest
 from copilot.storage.db import schema_version
 
 log = logging.getLogger("copilot.cli")
@@ -36,7 +35,35 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init", help="Datenbank anlegen/migrieren, Fachrichtungen einspielen")
-    sub.add_parser("territory", help="Vertriebsgebiet anzeigen")
+    tr = sub.add_parser("territory", help="Vertriebsgebiet anzeigen bzw. scannen (ohne Unterbefehl: Gebiet anzeigen)")
+    tr_sub = tr.add_subparsers(dest="what")
+    tr_sub.add_parser("show", help="Gebiet anzeigen")
+    sc = tr_sub.add_parser("scan", help="Territory Scan: 'Bearbeite <Ort>' -> Arbeitsliste")
+    sc.add_argument("scope", nargs="?", help="Ort oder Region, z. B. saarbrücken, wittlich, vulkaneifel")
+    sc.add_argument("--radius", type=float, dest="radius", help="Umkreis in km um den Ort bzw. die Praxis")
+    sc.add_argument("--around-practice", type=int, help="Umkreis um eine Praxis (ID)")
+    sc.add_argument("--around-customers", action="store_true",
+                    help="relevante Fachrichtungen im Umfeld deiner Kundenpraxen (laut Überweiser-Regeln)")
+    sc.add_argument("--specialty", action="append", default=[], help="Fachrichtung (mehrfach möglich), z. B. orthopaedie")
+    sc.add_argument("--from-file", type=Path, action="append", default=[], dest="from_files",
+                    help="eigene Liste/Export (CSV/TSV) als Quelle; nur Praxen aus dem Gebiet werden übernommen")
+    sc.add_argument("--mapping", type=Path, help="YAML-Mapping für --from-file")
+    sc.add_argument("--provider", action="append", default=[], dest="providers",
+                    help="vorbereiteter Provider (doctolib, map) – benötigt Freigabe in config/policies.yaml")
+    sc.add_argument("--unworked", action="store_true", help="bereits kontaktierte/laufende Praxen ausblenden")
+    sc.add_argument("--strict-radius", action="store_true", help="nur sicher innerhalb des Radius (ohne 'möglicherweise')")
+    sc.add_argument("--research", action="store_true", help="Website-Research für Treffer ausführen (nur freigegebene Domains)")
+    sc.add_argument("--research-limit", type=int, default=10)
+    sc.add_argument("--limit", type=int, help="maximale Zeilen der Arbeitsliste")
+    sc.add_argument("--dry-run", action="store_true", help="Vorschau: nichts speichern, keine Abrufe")
+    sc.add_argument("--json", action="store_true", help="Ausgabe als JSON")
+    sub.add_parser("providers", help="Datenquellen-Provider und ihr Status")
+    mg = sub.add_parser("merge", help="Merge-Queue (mögliche Dubletten)").add_subparsers(dest="what", required=True)
+    mg.add_parser("list", help="offene Einträge anzeigen")
+    mr = mg.add_parser("resolve", help="Eintrag entscheiden")
+    mr.add_argument("id", type=int)
+    mr.add_argument("--same", action="store_true", help="gleiche Praxis: an bestehende Praxis anhängen (nur Lücken füllen)")
+    mr.add_argument("--different", action="store_true", help="verschiedene Praxis: als neue Praxis anlegen")
     sub.add_parser("specialties", help="Fachrichtungs-Katalog anzeigen")
 
     imp = sub.add_parser("import", help="Datenimport")
@@ -119,9 +146,46 @@ def cmd_init(app: App, a) -> None:
 
 
 def cmd_territory(app: App, a) -> None:
+    if a.what == "scan":
+        return cmd_scan(app, a)
     for region in app.territory.regions.values():
         places = [pl.name for pl in app.territory.places if pl.region == region.key]
         print(f"{region.name} ({region.key}): {', '.join(places) or '-'}")
+
+
+def cmd_scan(app: App, a) -> None:
+    result = app.scanner.scan(ScanRequest(
+        scope=a.scope, radius_km=a.radius, around_practice=a.around_practice, around_customers=a.around_customers,
+        specialties=a.specialty, from_files=a.from_files, mapping=a.mapping, providers=a.providers,
+        unworked=a.unworked, strict_radius=a.strict_radius, research=a.research, research_limit=a.research_limit,
+        limit=a.limit, dry_run=a.dry_run))
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2) if a.json else render_text(result))
+
+
+def cmd_providers(app: App, a) -> None:
+    for info in describe_providers(app.policies):
+        print(f"{info.role:<9}{info.name:<18}{info.status:<16}{info.detail}")
+
+
+def cmd_merge(app: App, a) -> None:
+    if a.what == "list":
+        items = app.merge_repo.list("open")
+        for m in items:
+            practice = app.knowledge_repo.get_practice(m.practice_id)
+            print(f"Merge #{m.id}: Kandidat „{m.record.name}“ ({m.record.plz or ''} {m.record.ort or ''}, {m.provider})"
+                  f" ↔ Praxis #{m.practice_id} „{practice.name if practice else '?'}“ "
+                  f"— Confidence {m.confidence:.2f}: {', '.join(m.reasons)}")
+        print(f"{len(items)} offene Einträge")
+        return
+    if a.same == a.different:
+        raise ValidationFailed("Genau eines von --same / --different angeben", code="invalid_decision")
+    result = app.merge.resolve(a.id, "same" if a.same else "different")
+    if result.decision == "same":
+        print(f"Zusammengeführt: an Praxis #{result.practice_id} angehängt (nur fehlende Angaben ergänzt).")
+    elif result.created:
+        print(f"Als eigene Praxis #{result.practice_id} angelegt.")
+    else:
+        print("Als 'verschieden' vermerkt.")
 
 
 def cmd_specialties(app: App, a) -> None:
@@ -188,11 +252,8 @@ def cmd_practice(app: App, a) -> None:
 
 def cmd_research(app: App, a) -> None:
     practice = _practice_or_404(app, a.practice)
-    client = PoliteClient(FetchPolicy(app.policies.research), UrllibTransport(), app.settings.user_agent)
-    service = ResearchService(app.conn, app.research_repo, app.facts, app.knowledge_repo, app.audit,
-                              app.settings.raw_cache_dir)
-    result = service.run(PracticeWebsiteProvider(client, app.policies),
-                         ResearchRequest(EntityType.PRACTICE, practice.id, a.url or practice.website_url))
+    result = app.research_service.run(app.research_provider(),
+                                      ResearchRequest(EntityType.PRACTICE, practice.id, a.url or practice.website_url))
     print(f"Quelle #{result.source.id}: {result.source.url} (abgerufen {result.source.retrieved_at.isoformat()})")
     for fact in result.facts:
         print("  " + app.facts.view(fact).statement())
@@ -227,7 +288,8 @@ def cmd_network(app: App, a) -> None:
     else:
         _practice_or_404(app, a.practice)
         for r in app.network_repo.for_entity(EntityType.PRACTICE, a.practice):
-            dist = f" {r.distance_km:g} km" if r.distance_km is not None else ""
+            dist = (" " + format_distance(r.distance_km, r.distance_uncertainty_km or 0.0)
+                    if r.distance_km is not None else "")
             print(f"#{r.from_id} → #{r.to_id} {r.rel_type.value}{dist}: {app.network.describe(r)}")
 
 
@@ -256,7 +318,7 @@ def cmd_audit(app: App, a) -> None:
 
 COMMANDS = {"init": cmd_init, "territory": cmd_territory, "specialties": cmd_specialties, "import": cmd_import,
             "practice": cmd_practice, "research": cmd_research, "fact": cmd_fact, "network": cmd_network,
-            "worklist": cmd_worklist, "audit": cmd_audit}
+            "worklist": cmd_worklist, "audit": cmd_audit, "providers": cmd_providers, "merge": cmd_merge}
 
 
 def main(argv: list[str] | None = None) -> int:

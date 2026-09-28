@@ -14,8 +14,9 @@ ALLOWED_DETAIL_KEYS = frozenset({
     "rows", "created", "updated", "unchanged", "failed", "warnings", "role", "dry_run", "file_sha256",
     "provider", "status", "error_code", "source_id", "research_id", "fact_count", "fact_id", "rule_id",
     "origin", "rel_type", "count", "radius_km", "skipped_no_geo", "level", "scope", "version",
+    "candidates", "attached", "queued", "task", "decision",
 })
-_SAFE_STRING = re.compile(r"^[A-Za-z0-9_.:>\-/ ]{0,80}$")
+_SAFE_STRING = re.compile(r"^[\w.:>\-/ ]{0,80}$")   # \w inkl. Umlaute (Ortsnamen), aber keine @-/Sonderzeichen
 
 
 def _sanitize(details: dict[str, Any]) -> dict[str, Any]:

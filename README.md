@@ -3,9 +3,10 @@
 Persönlicher Sales-Intelligence-Copilot (lokal-first) für das Gebiet Saarland · Trier · Wittlich · Vulkaneifel.
 Architektur und Begründungen: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-**Stand: Phase 0 (Fundament) + Phase 1 (Territory & Knowledge).** Es gibt bewusst keine externen Aktionen
-(Mail, LinkedIn, CRM) und keinen doctolib-/LinkedIn-Abruf. Alle Befehle liegen auf Automatisierungsstufe 1/2
-(Research & Vorschläge).
+**Stand: Phase 0 (Fundament) + Phase 1 (Territory & Knowledge) + Territory Scanner.** Es gibt bewusst keine externen
+Aktionen (Mail, LinkedIn, CRM) und keinen produktiven doctolib-/LinkedIn-Abruf. Alle Befehle liegen auf
+Automatisierungsstufe 1/2 (Research & Vorschläge). Der Copilot ist eine Automatisierungsschicht über deinem Workflow,
+kein zweites CRM: [`docs/TERRITORY_SCANNER.md`](docs/TERRITORY_SCANNER.md).
 
 ## Lokal starten
 
@@ -29,6 +30,10 @@ Der Befehl läuft im Repo-Verzeichnis (dort liegen `config/` und `data/`); von a
 | `copilot fact add --practice ID --key K --value V --note …` | Belegten Fact manuell erfassen (Quelle „manuelle Erfassung“) |
 | `copilot network observe --from A --to B --fact F` | Beziehung als `observed` – nur mit aktivem Fact |
 | `copilot research website --practice ID [--url URL]` | Praxis-Website analysieren (nur freigegebene Domains, robots.txt, Rate-Limit) |
+| `copilot territory scan ORT [--radius KM] [--specialty S]… [--from-file DATEI] [--around-customers] [--unworked] [--research] [--dry-run] [--json]` | **Territory Scan** → Arbeitsliste (siehe unten) |
+| `copilot territory scan --around-practice ID --radius KM` | Umkreis um eine Praxis |
+| `copilot providers` | Datenquellen-Provider: was läuft, was ist nur vorbereitet |
+| `copilot merge list` / `merge resolve ID --same\|--different` | Merge-Queue für mögliche Dubletten (nie automatisch) |
 | `copilot audit` | Audit-Log |
 
 ## Synthetische Testdaten importieren
@@ -47,6 +52,42 @@ copilot network derive --practice 1 && copilot network list --practice 1
 Nutze für die Fixture eine Wegwerf-DB (`COPILOT_DATA_DIR=/tmp/copilot-test copilot …`), damit sich Testdaten nicht mit
 echten Daten mischen.
 
+## Territory Scan
+
+```bash
+copilot territory scan saarbrücken                              # „Bearbeite Saarbrücken“ (Zuordnung nach Ortsangabe)
+copilot territory scan saarbrücken --radius 10                  # 10 km um den Ortsmittelpunkt (mit Genauigkeitsangabe)
+copilot territory scan saarbrücken --specialty orthopaedie      # Fachrichtungen über den Katalog (Aliasse ok), mehrfach möglich
+copilot territory scan saarbrücken --around-customers --radius 10 --unworked
+                                                                # relevante Fachärzte im Umfeld meiner Hausarztkunden, noch nicht bearbeitet
+copilot territory scan saarbrücken --from-file export.csv --dry-run   # eigene Liste als Quelle, Vorschau ohne Speichern
+copilot territory scan saarbrücken --research                   # zusätzlich Website-Research (nur freigegebene Domains, gedeckelt)
+copilot merge list                                              # mögliche Dubletten prüfen
+```
+
+Mit den synthetischen Fixtures (Wegwerf-DB!):
+
+```bash
+export COPILOT_DATA_DIR=/tmp/copilot-demo
+copilot import practices tests/fixtures/synthetic_practices.txt
+copilot territory scan saarbrücken --radius 10 --from-file tests/fixtures/synthetic_scan_source.txt --dry-run
+```
+
+Die Arbeitsliste zeigt je Praxis Fachrichtung, Ort, Entfernung (Näherungen als „≈ … (±5 km)“), Quelle, Status,
+Research-Status, belegtes Doctolib-Signal, Website, Facts, Netzwerkbezug (`derived` = „nicht belegt“) und die nächste Aktion.
+
+### Was heute funktioniert – und was nur vorbereitet ist
+
+| Quelle / Baustein | Status |
+|---|---|
+| Eigene Listen/Exporte (`--from-file`, `import practices`) | **funktioniert** |
+| Praxis-Websites (Research, `--research`) | **funktioniert** (Domain-Freigabe nötig, robots.txt, Rate-Limit, gedeckelt) |
+| Matching gegen Bestand + Merge-Queue | **funktioniert** (konservativ, kein automatisches Fuzzy-Merging) |
+| Radius-/Gebietslogik mit Unsicherheit | **funktioniert** (Genauigkeit: Ortsmittelpunkte ±5 km, exakte Koordinaten wenn geliefert) |
+| Karten-/Geodaten (`map`) | vorbereitet (Interface, keine Datenquelle) |
+| Doctolib (`doctolib`) | vorbereitet (Freigabe-Checkliste + Provider-Interface, keine Zugriffsmethode) |
+| LLM-Gateway | vorbereitet (aus, kein Anbieter) |
+
 ## Echte Datenquellen anschließen
 
 1. **Eigene Kunden-/Praxislisten (CSV/TSV/Excel-Export als CSV)** – funktioniert schon jetzt:
@@ -64,8 +105,9 @@ echten Daten mischen.
 3. **Web-Research**: neuer `ResearchProvider` in `src/copilot/research/` (Vorlage: `practice_website.py`). Provider liefern
    nur Source- und Fact-Entwürfe; Persistenz, Zeitstempel, `stale_after` und Supersede übernimmt der `ResearchService`.
    Domains müssen in `config/policies.yaml` (`research.allowed_domains`) freigegeben werden – Standard: **alles gesperrt**.
-   `doctolib.*` und `linkedin.com` sind zusätzlich im Code hart gesperrt (`research/policy.py`) und werden erst nach
-   ausdrücklicher Freigabe/Klärung (Architektur §13) geöffnet.
+   `linkedin.com` ist immer gesperrt. `doctolib.*` ist für alle Provider gesperrt, außer für den `DoctolibProvider` nach
+   vollständiger Freigabe-Checkliste (`providers.doctolib.clearance` in `config/policies.yaml`) – siehe
+   [`docs/TERRITORY_SCANNER.md`](docs/TERRITORY_SCANNER.md). Neue Quellen: `SourceProvider` in `src/copilot/scanner/providers/`.
 4. **Fachrichtungen / Überweiser-Regeln / Gewichte**: `config/specialties.yaml`, `config/referral_rules.yaml`,
    `config/scoring.yaml`, `config/territory.yaml` (alles ohne Secrets, committbar).
 
@@ -97,9 +139,10 @@ Erzwungen auch in der Datenbank: `observed` braucht `fact_id`, `derived` braucht
 ## Offene Punkte / bewusst noch nicht umgesetzt
 
 * `Contact` (PII-Hotspot), `Action`, `FollowUp`, `Approval` und der Freigabe-Workflow (Phase 3/4); `Event` hat Tabellen/Repository, aber noch keine Erfassung/CLI.
-* Kein LLM, keine Entwürfe (Phase 2), kein Gmail/Kalender/CRM/LinkedIn, kein doctolib-Abruf, keine Web-UI.
-* Entity-Resolution: gleiche Praxis mit abweichender Schreibweise von Name/Straße/PLZ wird als neue Praxis angelegt
-  (Merge-Queue folgt); Praxisgeodaten sind nur Ortsmittelpunkte (`geo_precision=place`) – Distanzen sind Näherungen.
+* Kein LLM-Anbieter, keine Entwürfe (Phase 2; das Gateway ist vorbereitet), kein Gmail/Kalender/CRM/LinkedIn, kein doctolib-Abruf
+  (Provider vorbereitet), kein Karten-Provider, keine Web-UI.
+* Entity-Resolution: nur konservativ (siehe Scanner-Doku). Praxisgeodaten sind ohne exakte Koordinaten nur Ortsmittelpunkte
+  (`geo_precision=place`, ±5 km Annahme) – Distanzen sind Näherungen. Vor Migration 0006 importierte Praxen haben keinen Herkunftsnachweis.
 * Retention-Job für `raw_cache`, Lösch-/Auskunftsfunktion je Person.
 * Scoring-Gewichte sind neutrale Platzhalter; Überweiser-Regeln sind eine Arbeitsannahme.
 * Abzuklären (Architektur §13): interne KI-/Datenrichtlinie, erlaubte Datenquellen, doctolib-Arztsuche, UWG §7 für Mail.

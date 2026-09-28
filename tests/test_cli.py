@@ -54,7 +54,7 @@ def test_research_blocked_by_default_policy(env, capsys, synthetic_file):
     code, _, err = run(capsys, "research", "website", "--practice", "4")   # Website: synth-delta.invalid, nicht freigegeben
     assert code == 6 and "domain_not_allowed" in err
     code, _, err = run(capsys, "research", "website", "--practice", "1", "--url", "https://www.doctolib.de/x")
-    assert code == 6 and "hard_blocked_domain" in err
+    assert code == 6 and "doctolib_not_cleared" in err
 
 
 def test_manual_fact_and_observed_relationship(env, capsys, synthetic_file):
@@ -70,3 +70,74 @@ def test_no_command_has_external_effects():
     text = build_parser().format_help().lower()
     for forbidden in ("send", "mail", "linkedin", "crm", "post"):
         assert forbidden not in text.replace("(level 1/2: research & vorschläge)", "")
+
+
+# ---------------------------------------------------------------- Territory Scanner
+@pytest.fixture
+def scan_env(env, capsys, synthetic_file):
+    run(capsys, "import", "practices", str(synthetic_file))
+    return env
+
+
+def test_territory_without_subcommand_still_shows_territory(env, capsys):
+    for argv in (("territory",), ("territory", "show")):
+        code, out, _ = run(capsys, *argv)
+        assert code == 0 and "Saarland (saarland): Saarbrücken" in out
+
+
+def test_scan_place_radius_and_specialty(scan_env, capsys, scan_source):
+    code, out, _ = run(capsys, "territory", "scan", "saarbrücken")
+    assert code == 0 and "Territory Scan: Saarbrücken" in out and "Zuordnung nach Ortsangabe" in out
+    code, out, _ = run(capsys, "territory", "scan", "saarbrücken", "--radius", "10")
+    assert "10 km um Saarbrücken" in out and "möglicherweise im Radius" in out and "Genauigkeit:" in out
+    code, out, _ = run(capsys, "territory", "scan", "saarbrücken", "--specialty", "orthopaedie")
+    assert "SYNTH Orthopädie Gamma" in out and "SYNTH Kardiologie Beta" not in out
+
+
+def test_scan_from_file_dry_run_then_real(scan_env, capsys, scan_source):
+    code, out, _ = run(capsys, "territory", "scan", "Saarbrücken", "--from-file", str(scan_source), "--dry-run")
+    assert code == 0 and "[DRY-RUN" in out and "neu 3" in out and "außerhalb Gebiet 2" in out and "Merge-Queue 2" in out and "#(neu)" in out
+    assert "0 offene Einträge" in run(capsys, "merge", "list")[1]                    # Dry-Run hat nichts eingereiht
+    code, out, _ = run(capsys, "territory", "scan", "Saarbrücken", "--from-file", str(scan_source))
+    assert "Mögliche Dubletten" in out and "nichts wurde zusammengeführt" in out
+    code, out, _ = run(capsys, "merge", "list")
+    assert "2 offene Einträge" in out and "Confidence" in out
+    code, out, _ = run(capsys, "merge", "resolve", "1", "--same")
+    assert code == 0 and "angehängt" in out
+    assert run(capsys, "merge", "resolve", "1", "--different")[0] == 5               # bereits entschieden
+    assert run(capsys, "merge", "resolve", "2")[0] == 3                              # genau eine Option verlangt
+
+
+def test_scan_json_output(scan_env, capsys):
+    import json
+    code, out, _ = run(capsys, "territory", "scan", "Saarbrücken", "--json", "--limit", "2")
+    data = json.loads(out)
+    assert code == 0 and len(data["items"]) == 2 and data["area"]["accuracy"]
+
+
+def test_scan_errors_have_structured_codes(scan_env, capsys):
+    cases = [(("territory", "scan"), 3, "scope_required"),
+             (("territory", "scan", "Berlin"), 3, "unknown_scope"),
+             (("territory", "scan", "Saarbrücken", "--specialty", "zauber"), 3, "unknown_specialty"),
+             (("territory", "scan", "Saarland", "--radius", "5"), 3, "radius_needs_place"),
+             (("territory", "scan", "Saarbrücken", "--provider", "doctolib"), 6, "provider_disabled"),
+             (("territory", "scan", "Saarbrücken", "--provider", "google"), 3, "unknown_provider"),
+             (("territory", "scan", "Saarbrücken", "--from-file", "/nicht/da.csv"), 8, "file_not_found"),
+             (("territory", "scan", "--around-customers", "Saarbrücken"), 3, "no_customer_anchors")]
+    for argv, exit_code, code in cases:
+        got, _, err = run(capsys, *argv)
+        assert (got, code in err) == (exit_code, True), (argv, err)
+
+
+def test_scan_research_flag_respects_default_deny(scan_env, capsys):
+    code, out, _ = run(capsys, "territory", "scan", "Saarbrücken", "--research")
+    assert code == 0 and "blockiert (domain_not_allowed)" in out                     # kein Abruf ohne Domain-Freigabe
+
+
+def test_providers_overview_separates_working_from_prepared(env, capsys):
+    code, out, _ = run(capsys, "providers")
+    rows = {line.split()[1]: line.split()[2] for line in out.strip().splitlines()}
+    assert code == 0
+    assert rows == {"local_import": "ready", "practice_website": "ready", "map": "disabled",
+                    "doctolib": "disabled", "llm_gateway": "disabled"}
+    assert "KEINE Domain freigegeben" in out

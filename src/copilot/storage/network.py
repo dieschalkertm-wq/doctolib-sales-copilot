@@ -21,9 +21,9 @@ class NetworkRepository:
         """Idempotent über UNIQUE(from,to,rel_type,origin). Gibt (Relation, neu_angelegt) zurück."""
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO k_network_relationship (from_type, from_id, to_type, to_id, rel_type, origin, strength,"
-            " distance_km, fact_id, rule_id, note, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            " distance_km, distance_uncertainty_km, fact_id, rule_id, note, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (r.from_type.value, r.from_id, r.to_type.value, r.to_id, r.rel_type.value, r.origin.value, r.strength,
-             r.distance_km, r.fact_id, r.rule_id, r.note, to_iso(utcnow())))
+             r.distance_km, r.distance_uncertainty_km, r.fact_id, r.rule_id, r.note, to_iso(utcnow())))
         created = cur.rowcount > 0
         row = self.conn.execute(
             "SELECT * FROM k_network_relationship WHERE from_type=? AND from_id=? AND to_type=? AND to_id=?"
