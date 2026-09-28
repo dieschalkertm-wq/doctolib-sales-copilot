@@ -1,0 +1,32 @@
+# Policy-Gate für Research (ARCHITECTURE §7). Enthält keine Secrets.
+research:
+  rate_limit_seconds: 1.0        # Minimum 1.0 (max. 1 Request/Domäne/Sekunde)
+  timeout_seconds: 10
+  max_bytes: 2000000
+  max_redirects: 3
+  # Nur explizit freigegebene Domains dürfen abgerufen werden. Leer = alles gesperrt.
+  # Beispiel (erst eintragen, wenn du die Site geprüft hast):  - praxis-beispiel.de
+  # doctolib.* und linkedin.com sind zusätzlich im Code hart gesperrt (Phase 1).
+  allowed_domains: []
+  # Erkennungssignale: Links/Widgets zu diesen Domains gelten als "Online-Buchung erkennbar".
+  booking_signal_domains:
+    jameda.de: Jameda
+    samedi.de: samedi
+    terminland.de: Terminland
+    doctena.com: Doctena
+
+# Nach wie vielen Tagen ein Fact als veraltet gilt (stale_after = observed_at + Tage).
+fact_staleness_days:
+  default: 180
+  website_title: 365
+  structured_data_name: 365
+  public_contact_phone: 365
+  public_contact_email: 365
+  doctolib_link_present: 90
+  online_booking_signal: 90
+
+# Für "Unbekannt / zu klären"-Ausgaben: Diese Facts sollten für eine Praxis vorliegen.
+expected_fact_keys:
+  - doctolib_link_present
+  - online_booking_signal
+  - public_contact_phone

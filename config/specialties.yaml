@@ -1,0 +1,22 @@
+# Fachrichtungen inkl. Aliasse für die Normalisierung von Importen (Groß-/Kleinschreibung, Umlaute egal).
+# Unbekannte Bezeichnungen werden beim Import gemeldet, nie geraten.
+specialties:
+  - {code: allgemeinmedizin, name: Allgemeinmedizin (Hausarzt), aliases: [Hausarzt, Hausärztin, Allgemeinarzt, Allgemeinarztpraxis, Facharzt für Allgemeinmedizin, Praktischer Arzt, Hausarztpraxis, Hausärztliche Praxis]}
+  - {code: innere_medizin, name: Innere Medizin, aliases: [Internist, Internistin, Facharzt für Innere Medizin]}
+  - {code: kardiologie, name: Kardiologie, aliases: [Kardiologe, Kardiologin, Herzspezialist]}
+  - {code: gastroenterologie, name: Gastroenterologie, aliases: [Gastroenterologe]}
+  - {code: pneumologie, name: Pneumologie, aliases: [Lungenarzt, Lungenfacharzt, Pulmologie]}
+  - {code: diabetologie, name: Diabetologie, aliases: [Diabetologe, Diabetespraxis]}
+  - {code: orthopaedie, name: Orthopädie und Unfallchirurgie, aliases: [Orthopädie, Orthopäde, Orthopädin, Orthopädie und Unfallchirurgie]}
+  - {code: chirurgie, name: Chirurgie, aliases: [Chirurg, Chirurgin]}
+  - {code: dermatologie, name: Dermatologie, aliases: [Hautarzt, Hautärztin, Haut- und Geschlechtskrankheiten, Dermatologe]}
+  - {code: neurologie, name: Neurologie, aliases: [Neurologe, Neurologin]}
+  - {code: psychiatrie, name: Psychiatrie, aliases: [Psychiater, Psychiaterin, Psychiatrie und Psychotherapie]}
+  - {code: psychotherapie, name: Psychotherapie, aliases: [Psychotherapeut, Psychotherapeutin]}
+  - {code: urologie, name: Urologie, aliases: [Urologe, Urologin]}
+  - {code: hno, name: Hals-Nasen-Ohren-Heilkunde, aliases: [HNO, Hals-Nasen-Ohren, HNO-Arzt, Hals Nasen Ohren]}
+  - {code: augenheilkunde, name: Augenheilkunde, aliases: [Augenarzt, Augenärztin, Ophthalmologie]}
+  - {code: gynaekologie, name: Gynäkologie, aliases: [Frauenarzt, Frauenärztin, Gynäkologe, Gynäkologin, Frauenheilkunde]}
+  - {code: paediatrie, name: Pädiatrie, aliases: [Kinderarzt, Kinderärztin, Kinder- und Jugendmedizin, Pädiater]}
+  - {code: radiologie, name: Radiologie, aliases: [Radiologe, Radiologin]}
+  - {code: zahnmedizin, name: Zahnmedizin, aliases: [Zahnarzt, Zahnärztin, Zahnarztpraxis]}

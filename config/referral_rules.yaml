@@ -1,0 +1,9 @@
+# Regelbasierte Überweiser-Heuristik (Hausarzt -> Fachrichtung). Ergebnis ist IMMER origin=derived,
+# also nie "beobachtet". Die Zuordnung ist eine Arbeitsannahme und keine belegte Tatsache;
+# passe sie nach deiner Vertriebserfahrung an.
+version: 1
+rules:
+  - source: allgemeinmedizin
+    targets: [kardiologie, orthopaedie, dermatologie, gastroenterologie, pneumologie, neurologie, urologie, hno, augenheilkunde, radiologie]
+  - source: innere_medizin
+    targets: [kardiologie, gastroenterologie, pneumologie, diabetologie, radiologie]

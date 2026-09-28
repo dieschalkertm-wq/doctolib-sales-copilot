@@ -1,0 +1,17 @@
+# Deterministische, nachvollziehbare Priorisierung (kein KI-Scoring). Jede Punktvergabe wird im Ergebnis begründet.
+# Die Gewichte sind bewusst neutral gesetzt – passe sie an deine Prioritäten an.
+specialty_fit:
+  default: 5          # Punkte, wenn eine Fachrichtung bekannt ist
+  overrides: {}       # z. B. {kardiologie: 8}
+practice_size:
+  two_doctors: 3
+  three_or_more: 6
+referral_proximity:   # Praxis wird von einer Kundenpraxis (mutmaßlich) überwiesen
+  observed: 20        # belegt (Fact)
+  manual: 15          # von dir erfasst
+  derived: 8          # nur regelbasiert abgeleitet
+competitor_booking_signal: 4   # andere Online-Terminbuchung öffentlich erkennbar (belegter, aktueller Fact)
+exclude:
+  customers: true
+  already_doctolib_recognised: true   # aktueller Fact doctolib_link_present
+  prospect_stages: [won, lost, parked]

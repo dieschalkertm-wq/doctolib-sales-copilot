@@ -1,0 +1,31 @@
+# Vertriebsgebiet. Koordinaten sind gerundete Ortsmittelpunkte (Referenzdaten, keine Kundendaten).
+# Erweitere die Liste, wenn Orte fehlen; unbekannte Orte werden beim Import gemeldet.
+regions:
+  - key: saarland
+    name: Saarland
+    plz_prefixes: ["66"]
+  - key: trier
+    name: Trier
+  - key: wittlich
+    name: Wittlich
+  - key: vulkaneifel
+    name: Vulkaneifel
+
+places:
+  - {name: Saarbrücken,      region: saarland,    lat: 49.2402, lon: 6.9969}
+  - {name: Saarlouis,        region: saarland,    lat: 49.3134, lon: 6.7517}
+  - {name: Dillingen/Saar,   region: saarland,    lat: 49.3540, lon: 6.7280, aliases: [Dillingen]}
+  - {name: Völklingen,       region: saarland,    lat: 49.2510, lon: 6.8320}
+  - {name: Püttlingen,       region: saarland,    lat: 49.2840, lon: 6.8880}
+  - {name: St. Ingbert,      region: saarland,    lat: 49.2790, lon: 7.1100, aliases: [Sankt Ingbert]}
+  - {name: Neunkirchen/Saar, region: saarland,    lat: 49.3450, lon: 7.1800, aliases: [Neunkirchen]}
+  - {name: Homburg/Saar,     region: saarland,    lat: 49.3260, lon: 7.3390, aliases: [Homburg]}
+  - {name: Blieskastel,      region: saarland,    lat: 49.2370, lon: 7.2610}
+  - {name: St. Wendel,       region: saarland,    lat: 49.4670, lon: 7.1680, aliases: [Sankt Wendel]}
+  - {name: Merzig,           region: saarland,    lat: 49.4430, lon: 6.6390}
+  - {name: Lebach,           region: saarland,    lat: 49.4100, lon: 6.9100}
+  - {name: Trier,            region: trier,       lat: 49.7499, lon: 6.6371}
+  - {name: Wittlich,         region: wittlich,    lat: 49.9870, lon: 6.8930}
+  - {name: Daun,             region: vulkaneifel, lat: 50.1970, lon: 6.8300}
+  - {name: Gerolstein,       region: vulkaneifel, lat: 50.2230, lon: 6.6650}
+  - {name: Hillesheim,       region: vulkaneifel, lat: 50.2980, lon: 6.6700}

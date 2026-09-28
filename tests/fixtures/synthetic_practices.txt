@@ -1,0 +1,11 @@
+Praxisname;Straße;PLZ;Ort;Fachrichtung;Website;Ärzte
+SYNTH Hausarztpraxis Alpha;Teststr. 1;66111;Saarbrücken;Hausarzt;synth-alpha.invalid;"Dr. med. Erika Testfrau; Max Beispielmann"
+SYNTH Kardiologie Beta;Musterweg 2;66113;Saarbruecken;Kardiologie;https://synth-beta.invalid;Prof. Dr. Karl Probe
+SYNTH Orthopädie Gamma;Probeallee 3;66115;Saarbrücken;Orthopädie und Unfallchirurgie;;Dr. Lena Muster
+SYNTH Hautarzt Delta;Testplatz 4;66333;Völklingen;Dermatologie;synth-delta.invalid;
+SYNTH Hausarztpraxis Epsilon;Beispielgasse 5;54290;Trier;Allgemeinmedizin;;Dr. Tom Demo
+SYNTH Neurologie Zeta;Demostraße 6;66111;Saarbrücken;Fachgebiet Unbekannt;;
+SYNTH Praxis Eta;Weitweg 7;50667;Köln;Kardiologie;;
+;Nirgendwo 8;66111;Saarbrücken;Kardiologie;;
+SYNTH Praxis Theta;Fehlerstr. 9;661;Saarbrücken;Kardiologie;;
+SYNTH Hausarztpraxis Alpha;Teststraße 1;66111;Saarbrücken;Allgemeinmedizin;;Dr. Sina Nachtrag
