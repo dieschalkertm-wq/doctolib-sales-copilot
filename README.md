@@ -2,6 +2,7 @@
 
 Persönlicher Sales-Intelligence-Copilot (lokal-first) für das Gebiet Saarland · Trier · Wittlich · Vulkaneifel.
 Architektur und Begründungen: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Sales-Mentor & Wissensbasis (Praxis-/PVS-Grundwissen, Leitfäden, Produktwissen): [`MENTOR.md`](MENTOR.md), [`knowledge/`](knowledge/README.md).
 
 **Stand: Phase 0 (Fundament) + Phase 1 (Territory & Knowledge) + Territory Scanner.** Es gibt bewusst keine externen
 Aktionen (Mail, LinkedIn, CRM) und keinen produktiven doctolib-/LinkedIn-Abruf. Alle Befehle liegen auf

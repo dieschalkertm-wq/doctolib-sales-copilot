@@ -46,3 +46,6 @@ dist/
 # Build-Artefakte
 *.egg-info/
 build/
+
+# Rohtranskripte aus Kundengesprächen – nur lokal, nie committen
+knowledge/sessions/roh/
