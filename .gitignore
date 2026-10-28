@@ -49,3 +49,6 @@ build/
 
 # Rohtranskripte aus Kundengesprächen – nur lokal, nie committen
 knowledge/sessions/roh/
+
+# Interne Doctolib-Infos (Schulungen, Wettbewerb, Preise, Strategie) – niemals committen
+knowledge/intern/

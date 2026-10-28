@@ -23,4 +23,5 @@ Diese Datei liest Claude zu Beginn jeder Sitzung. Sie legt fest, wie du gecoacht
 ## Regeln
 - Mails werden nur als **Entwurf** vorbereitet. Senden machst du.
 - Keine Patientendaten speichern. Rohtranskripte nur in `knowledge/sessions/roh/` (nicht im Git).
-- Interne Doctolib-Unterlagen nur ablegen, wenn das erlaubt ist.
+- **Das Repo ist öffentlich.** Interne Doctolib-Infos (Schulungen, Wettbewerb, Preise, Strategie, Kollegennamen)
+  kommen nur nach `knowledge/intern/`. Dieser Ordner wird nie hochgeladen.

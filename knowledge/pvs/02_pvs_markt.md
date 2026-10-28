@@ -57,3 +57,19 @@ deine Gespräche die beste Quelle. Ich lege zu jedem System eine Karte an, sobal
 | **Schulung** | „Wie viele Mitarbeiter arbeiten im System?“ |
 | **Geräte** | „Welche Geräte und welches Labor sind angebunden?“ |
 | **Angst vor Ausfall** | „Was wäre für Sie das Schlimmste beim Wechsel?“ |
+
+## Zahnarztpraxen – eigene Software-Welt
+
+Zahnärzte rechnen über die **KZV** ab (BEMA für Kasse, GOZ für Privat). Sie nutzen deshalb eigene Programme.
+
+| Hersteller | Produkt |
+|---|---|
+| Dampsoft | DS-Win |
+| Computer konkret | ivoris |
+| solutio | charly |
+| CGM | CGM Z1 |
+| evident | evident |
+
+**VDDS** (Verband Deutscher Dental-Software) legt gemeinsame Schnittstellen für Zahnarzt-Software fest,
+zum Beispiel für Röntgen und Bilddaten. Online-Termintools docken über solche Schnittstellen oder über eigene
+Konnektoren an das Zahnarzt-Programm an.
