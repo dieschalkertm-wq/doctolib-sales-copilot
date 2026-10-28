@@ -20,5 +20,7 @@ Schreib einfach in den Chat, zum Beispiel:
 ## Dateien
 - [pvs/01_praxis_abc.md](pvs/01_praxis_abc.md) – Praxis-ABC: Aufbau, Rollen, Abläufe, Abrechnung, TI
 - [pvs/02_pvs_markt.md](pvs/02_pvs_markt.md) – Was ein PVS kann und welche Systeme die Praxen haben
+- [pvs/hausarztpraxis_fuer_dummies.md](pvs/hausarztpraxis_fuer_dummies.md) – Lernpfad Hausarztpraxis (A1–A6)
+- [dust_instructions.md](dust_instructions.md) – Instructions für den Dust-Agenten (Version 2)
 - [leitfaeden/pvs_erstgespraech.md](leitfaeden/pvs_erstgespraech.md) – Fragen fürs Erstgespräch zum PVS-Wechsel
 - [produkt/doctolib_pvs.md](produkt/doctolib_pvs.md) – Doctolib-PVS (wartet auf deine Infos)
